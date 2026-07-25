@@ -99,17 +99,31 @@ class KnowledgeBase:
 
     def run_memory_compaction(self):
         """Compaction cron/summarization job: summarizes and prunes raw details, but keeps key evidence."""
-        # Simple local compaction logic: group events older than a brief window and archive them
+        # Clean consolidated compaction: retrieve all existing events, build consolidated summary, then prune them
         cursor = self.conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM event_store")
         count = cursor.fetchone()[0]
 
-        # Aggregate stats into a master summary document, then keep them clean
         if count > 0:
-            cursor.execute("SELECT payload_json FROM event_store")
+            cursor.execute("SELECT topic, source, payload_json, timestamp FROM event_store")
             rows = cursor.fetchall()
-            summarized_stats = f"Compacted {len(rows)} execution logs into memory. Total transaction volume high."
+
+            # Formulate detailed compaction summary report
+            events_summary = []
+            for row in rows:
+                events_summary.append(f"- [{row[0]}] Source: {row[1]} | At: {row[3]}")
+
+            summarized_stats = (
+                f"Memory Compaction executed successfully. Compacted and pruned {len(rows)} raw event logs.\n"
+                f"Summary of activities captured:\n" + "\n".join(events_summary)
+            )
+
+            # Save accumulated metrics and trace details as an archival document to preserve key evidence
             self.insert_document("compaction_latest", "Memory Compaction Log", summarized_stats, "system_metadata")
+
+            # Prune/Delete original raw logs to save database space and prevent unbounded storage growth
+            cursor.execute("DELETE FROM event_store")
+            self.conn.commit()
 
         return count
 

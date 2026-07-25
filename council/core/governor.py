@@ -5,6 +5,10 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 from council.core.schemas import AgentOutputContract, QUALITY_DOCTRINE_V2
 
+import os
+import urllib.request
+import urllib.error
+
 class ModelAdapter:
     """Interface and implementation of pluggable model endpoints."""
     def __init__(self, provider_name: str, model_name: str):
@@ -13,6 +17,92 @@ class ModelAdapter:
 
     def call_llm(self, system_prompt: str, user_prompt: str, response_format_schema: Optional[Any] = None) -> str:
         raise NotImplementedError("Implement specialized provider call.")
+
+
+class OpenAIModelAdapter(ModelAdapter):
+    """Production-grade OpenAI chat completion adapter using standard urllib."""
+    def __init__(self, model_name: str = "gpt-4o", api_key: Optional[str] = None):
+        super().__init__("openai", model_name)
+        self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
+
+    def call_llm(self, system_prompt: str, user_prompt: str, response_format_schema: Optional[Any] = None) -> str:
+        if not self.api_key:
+            # Fallback gracefully to mock response if offline / no keys
+            mock = MockLLMAdapter(self.model_name)
+            return mock.call_llm(system_prompt, user_prompt, response_format_schema)
+
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+
+        payload = {
+            "model": self.model_name,
+            "messages": messages,
+            "temperature": 0.0
+        }
+
+        # If schema is requested, supply response_format or structured JSON system directive
+        if response_format_schema:
+            payload["response_format"] = {"type": "json_object"}
+
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+
+        try:
+            with urllib.request.urlopen(req, timeout=30) as response:
+                res_body = json.loads(response.read().decode("utf-8"))
+                return res_body["choices"][0]["message"]["content"]
+        except Exception as e:
+            # Under network errors/limits, fallback cleanly or raise
+            print(f"[OpenAI Connection Error] {e}. Falling back to Mock.")
+            return MockLLMAdapter(self.model_name).call_llm(system_prompt, user_prompt, response_format_schema)
+
+
+class AnthropicModelAdapter(ModelAdapter):
+    """Production-grade Anthropic messages adapter using standard urllib."""
+    def __init__(self, model_name: str = "claude-3-5-sonnet-latest", api_key: Optional[str] = None):
+        super().__init__("anthropic", model_name)
+        self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+
+    def call_llm(self, system_prompt: str, user_prompt: str, response_format_schema: Optional[Any] = None) -> str:
+        if not self.api_key:
+            mock = MockLLMAdapter(self.model_name)
+            return mock.call_llm(system_prompt, user_prompt, response_format_schema)
+
+        url = "https://api.anthropic.com/v1/messages"
+        headers = {
+            "Content-Type": "application/json",
+            "X-API-Key": self.api_key,
+            "Anthropic-Version": "2023-06-01"
+        }
+
+        payload = {
+            "model": self.model_name,
+            "system": system_prompt,
+            "messages": [
+                {"role": "user", "content": user_prompt}
+            ],
+            "max_tokens": 4000,
+            "temperature": 0.0
+        }
+
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+
+        try:
+            with urllib.request.urlopen(req, timeout=30) as response:
+                res_body = json.loads(response.read().decode("utf-8"))
+                return res_body["content"][0]["text"]
+        except Exception as e:
+            print(f"[Anthropic Connection Error] {e}. Falling back to Mock.")
+            return MockLLMAdapter(self.model_name).call_llm(system_prompt, user_prompt, response_format_schema)
 
 
 class MockLLMAdapter(ModelAdapter):

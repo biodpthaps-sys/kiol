@@ -39,7 +39,7 @@ def test_knowledge_base_crud_and_compaction():
     comp_row = cursor.fetchone()
     assert comp_row is not None
     assert comp_row[0] == "Memory Compaction Log"
-    assert "Compacted 2" in comp_row[1]
+    assert "Compacted and pruned 2" in comp_row[1]
 
 
 def test_escalation_and_incidents():

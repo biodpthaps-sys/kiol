@@ -31,6 +31,20 @@ class WorkflowEngine:
         self.event_bus = event_bus
 
     def create_task(self, name: str, description: str, budget: float, parent_id: Optional[str] = None, inputs: Dict[str, Any] = None) -> Task:
+        # Prevent circular dependencies in the task hierarchy
+        if parent_id:
+            curr_id = parent_id
+            visited = set()
+            while curr_id:
+                if curr_id in visited:
+                    raise ValueError("Circular dependency detected in task hierarchy!")
+                visited.add(curr_id)
+                parent_task = self.tasks.get(curr_id)
+                if parent_task:
+                    curr_id = parent_task.parent_id
+                else:
+                    break
+
         task = Task(
             name=name,
             description=description,

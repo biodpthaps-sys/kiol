@@ -62,6 +62,13 @@ class SpecialistSpawner:
         if not agent or agent.revocation_status:
             raise RuntimeError(f"Spawned specialist {agent_name} does not exist or has been revoked.")
 
+        # Strict Permission check on the dynamic specialist
+        from council.core.registries import PermissionEngine, ToolRegistry
+        permission_engine = PermissionEngine(self.agent_registry, ToolRegistry())
+        if not permission_engine.verify_action(agent_name, "write_file", ""):
+            self.workflow_engine.transition_to(task_id, TaskState.FAILED, f"Permission Error: Specialist {agent_name} lacks build/write authority.")
+            return False
+
         # Phase C: Researching
         self.workflow_engine.transition_to(task_id, TaskState.RESEARCHING, f"Specialist {agent_name} researching task context")
         self.governor.record_cost(task_id, agent.domain, 0.01)

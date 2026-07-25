@@ -84,21 +84,52 @@ class VerificationHarness:
             return False
 
 
+from council.core.registries import PermissionEngine, ToolRegistry
+
 class PodRunner:
     """Config-driven generic pod execution runner implementing Phase C-G loop."""
     def __init__(self, pod_def: PodDefinition, agent_registry: AgentRegistry, router: ModelRouter,
-                 governor: CostGovernor, workflow_engine: WorkflowEngine, verification_harness: VerificationHarness):
+                 governor: CostGovernor, workflow_engine: WorkflowEngine, verification_harness: VerificationHarness,
+                 tool_registry: Optional[ToolRegistry] = None):
         self.pod_def = pod_def
         self.agent_registry = agent_registry
         self.router = router
         self.governor = governor
         self.workflow_engine = workflow_engine
         self.verification_harness = verification_harness
+        self.tool_registry = tool_registry or ToolRegistry()
 
     def execute_task(self, task_id: str) -> bool:
         task = self.workflow_engine.get_task(task_id)
         if not task:
             return False
+
+        # Strict Permission Validation
+        if self.agent_registry:
+            permission_engine = PermissionEngine(self.agent_registry, self.tool_registry)
+
+            # 1. Verify Lead Agent can delegate
+            lead_agent_name = None
+            for agent in self.agent_registry.list_agents():
+                if agent.role == self.pod_def.lead_role:
+                    lead_agent_name = agent.name
+                    break
+            if lead_agent_name:
+                if not permission_engine.verify_action(lead_agent_name, "delegate", ""):
+                    self.workflow_engine.transition_to(task_id, TaskState.FAILED, f"Permission Error: Lead {lead_agent_name} lacks delegation authority.")
+                    return False
+
+            # 2. Verify Builder Agent has authority to write/build
+            builder_agent = self.pod_def.builder_roles[0]
+            builder_agent_name = None
+            for agent in self.agent_registry.list_agents():
+                if agent.role == builder_agent:
+                    builder_agent_name = agent.name
+                    break
+            if builder_agent_name:
+                if not permission_engine.verify_action(builder_agent_name, "write_file", ""):
+                    self.workflow_engine.transition_to(task_id, TaskState.FAILED, f"Permission Error: Builder {builder_agent_name} lacks write/build authority.")
+                    return False
 
         # Phase C: Researching
         self.workflow_engine.transition_to(task_id, TaskState.RESEARCHING, "Gathering existing context and specs")
