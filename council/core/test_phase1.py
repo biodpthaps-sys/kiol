@@ -137,6 +137,29 @@ def test_phase_1_auditor_rejection_and_escalation():
     router = ModelRouter(strong_adapter=strong_mock, cheap_adapter=cheap_mock)
     governor = CostGovernor(global_limit=10.0)
     registry = AgentRegistry()
+
+    # Register Role configs
+    registry.register_role(RoleConfig(
+        name="backend_lead", domain="Backend Engineering", responsibilities=["Architecture", "Decomposition"], allowed_tools=["*"]
+    ))
+    registry.register_role(RoleConfig(
+        name="backend_builder", domain="Backend Engineering", responsibilities=["Code development"], allowed_tools=["*"]
+    ))
+    registry.register_role(RoleConfig(
+        name="backend_auditor", domain="Backend Engineering", responsibilities=["Independent review"], allowed_tools=["*"]
+    ))
+
+    # Register actual Agent identities with authority levels
+    registry.register_agent(AgentIdentity(
+        name="BackendLeadAgent", role="backend_lead", domain="Backend Engineering", authority_level=4, mission="Lead the backend pod", owner="CTO"
+    ))
+    registry.register_agent(AgentIdentity(
+        name="BackendBuilderAgent", role="backend_builder", domain="Backend Engineering", authority_level=2, mission="Build backend components", owner="backend_lead"
+    ))
+    registry.register_agent(AgentIdentity(
+        name="BackendAuditorAgent", role="backend_auditor", domain="Backend Engineering", authority_level=3, mission="Perform independent audits", owner="backend_lead"
+    ))
+
     harness = VerificationHarness(event_bus=bus)
 
     # Re-register necessary pod structures

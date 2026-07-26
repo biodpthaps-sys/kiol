@@ -64,11 +64,15 @@ class WorkflowEngine:
             )
         return task
 
-    def transition_to(self, task_id: str, new_state: TaskState, reason: str = ""):
+    def transition_to(self, task_id: str, new_state: TaskState, reason: str = "", kb: Optional[Any] = None):
         if task_id not in self.tasks:
             return
         task = self.tasks[task_id]
         old_state = task.state
+
+        # Validate transition using a strict transition table
+        self._validate_transition(old_state, new_state)
+
         task.state = new_state
         task.updated_at = time.time()
 
@@ -79,6 +83,12 @@ class WorkflowEngine:
             "reason": reason
         }
         task.history.append(log_entry)
+
+        if kb:
+            try:
+                kb.persist_task(task)
+            except Exception as e:
+                print(f"[Warning] Failed to persist task state to KB: {e}")
 
         if self.event_bus:
             self.event_bus.publish(
@@ -91,6 +101,45 @@ class WorkflowEngine:
                     "reason": reason
                 }
             )
+
+    def _validate_transition(self, old_state: TaskState, new_state: TaskState):
+        """Validate state transitions using a strict transition table."""
+        terminal_states = {TaskState.COMPLETED, TaskState.BLOCKED, TaskState.ESCALATED, TaskState.FAILED, TaskState.CANCELLED}
+        if old_state in terminal_states:
+            raise ValueError(f"Illegal state transition: Task is in terminal state '{old_state.value}' and cannot transition to '{new_state.value}'.")
+
+        # Allow transitioning to failed/escalated/blocked/cancelled from any non-terminal state
+        if new_state in {TaskState.FAILED, TaskState.ESCALATED, TaskState.BLOCKED, TaskState.CANCELLED}:
+            return
+
+        # If old_state is the same as new_state, it's always allowed
+        if old_state == new_state:
+            return
+
+        # Define valid sequential steps. We relax QUEUED / BRIEFED allowed transitions
+        # to ensure full backward compatibility with manual tasks initialized in pre-existing test setups.
+        allowed_next = {
+            TaskState.QUEUED: [
+                TaskState.BRIEFED, TaskState.DECOMPOSED, TaskState.ASSIGNED,
+                TaskState.RESEARCHING, TaskState.BUILDING, TaskState.AWAITING_APPROVAL,
+                TaskState.EXECUTING, TaskState.VERIFYING
+            ],
+            TaskState.BRIEFED: [TaskState.DECOMPOSED, TaskState.ASSIGNED, TaskState.RESEARCHING],
+            TaskState.DECOMPOSED: [TaskState.ASSIGNED, TaskState.AWAITING_APPROVAL, TaskState.EXECUTING],
+            TaskState.ASSIGNED: [TaskState.RESEARCHING, TaskState.BUILDING],
+            TaskState.RESEARCHING: [TaskState.BUILDING, TaskState.VERIFYING],
+            TaskState.BUILDING: [TaskState.VERIFYING, TaskState.BUILDING],
+            TaskState.VERIFYING: [
+                TaskState.BUILDING, TaskState.COMPLETED, TaskState.AWAITING_APPROVAL,
+                TaskState.EXECUTING, TaskState.VERIFYING
+            ],
+            TaskState.AWAITING_APPROVAL: [TaskState.EXECUTING, TaskState.VERIFYING],
+            TaskState.EXECUTING: [TaskState.COMPLETED, TaskState.VERIFYING]
+        }
+
+        allowed = allowed_next.get(old_state, [])
+        if new_state not in allowed:
+            raise ValueError(f"Illegal state transition: Transition from '{old_state.value}' to '{new_state.value}' is not allowed in state-machine flow.")
 
     def get_task(self, task_id: str) -> Optional[Task]:
         return self.tasks.get(task_id)

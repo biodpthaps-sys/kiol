@@ -126,6 +126,24 @@ class MockLLMAdapter(ModelAdapter):
 
         # Handle fallback structured JSON generation based on schema
         if response_format_schema == AgentOutputContract or (hasattr(response_format_schema, "__name__") and response_format_schema.__name__ == "AgentOutputContract"):
+            # If the user_prompt or system_prompt contains a logic bug, reject!
+            if "return a - b" in user_prompt or "logic bug" in user_prompt or "a - b" in user_prompt:
+                contract = AgentOutputContract(
+                    task_id="mocked_task_id",
+                    role="Mock Auditor",
+                    objective="Verify deliverables.",
+                    assumptions=[],
+                    inputs_used=[],
+                    actions_taken=[],
+                    evidence=["Reviewed code subtraction operator"],
+                    result="[REJECT] The code uses subtraction instead of addition, resulting in a logic bug.",
+                    confidence=0.4,
+                    risks=["Logic error detected"],
+                    open_questions=[],
+                    recommended_next_step="Fix subtraction to addition"
+                )
+                return contract.model_dump_json()
+
             # Provide a beautiful mocked AgentOutputContract JSON
             contract = AgentOutputContract(
                 task_id="mocked_task_id",
@@ -167,6 +185,15 @@ class ModelRouter:
             return self.strong_adapter
         return self.cheap_adapter
 
+    def route_by_context(self, risk_level: str = "low", novelty: bool = False, is_escalated: bool = False) -> ModelAdapter:
+        """
+        Dynamically route based on risk, novelty, and escalation context.
+        If high-risk, novel specialist problem, or escalated re-verification, route to strong reasoning.
+        """
+        if risk_level == "high" or novelty or is_escalated:
+            return self.strong_adapter
+        return self.cheap_adapter
+
 
 class CostGovernor:
     """Enforces per-task, per-pod, and global budget ceilings in code."""
@@ -175,12 +202,13 @@ class CostGovernor:
         self.global_spend: float = 0.0
         self.pod_spend: Dict[str, float] = {}
         self.task_spend: Dict[str, float] = {}
+        self.pod_limits: Dict[str, float] = {}
 
         # Track simulated step plans
         self.task_step_plans: Dict[str, Dict[str, Any]] = {}
 
     def set_pod_limit(self, pod_name: str, limit: float):
-        pass # In a production system, pod limit registrations would happen here
+        self.pod_limits[pod_name] = limit
 
     def submit_step_plan(self, task_id: str, estimated_tool_calls: int, estimated_cost: float):
         """Require step plans before execution begins."""
@@ -190,16 +218,33 @@ class CostGovernor:
             "actual_tool_calls": 0
         }
 
-    def record_cost(self, task_id: str, pod_name: str, cost: float):
-        # Update spend
+    def record_cost(self, task_id: str, pod_name: str, cost: float, task_limit: Optional[float] = None, pod_limit: Optional[float] = None):
+        target_task_limit = task_limit
+        target_pod_limit = pod_limit or self.pod_limits.get(pod_name)
+
+        # 1. Check Task-level ceiling
+        if target_task_limit is not None:
+            projected_task = self.task_spend.get(task_id, 0.0) + cost
+            if projected_task > target_task_limit:
+                raise RuntimeError(f"Task budget breached! Limit: {target_task_limit}, Projected: {projected_task}")
+
+        # 2. Check Pod-level ceiling
+        if target_pod_limit is not None:
+            projected_pod = self.pod_spend.get(pod_name, 0.0) + cost
+            if projected_pod > target_pod_limit:
+                raise RuntimeError(f"Pod budget breached! Limit: {target_pod_limit}, Projected: {projected_pod}")
+
+        # 3. Check Global ceiling
+        projected_global = self.global_spend + cost
+        if projected_global > self.global_limit:
+            raise RuntimeError(f"Global budget breached! Limit: {self.global_limit}, Projected: {projected_global}")
+
+        # Commit spend updates
         self.global_spend += cost
         self.pod_spend[pod_name] = self.pod_spend.get(pod_name, 0.0) + cost
         self.task_spend[task_id] = self.task_spend.get(task_id, 0.0) + cost
 
-        # Check breach
-        if self.global_spend > self.global_limit:
-            raise RuntimeError(f"Global budget breached! Limit: {self.global_limit}, Spent: {self.global_spend}")
-
+        # Keep task actual cost updated if task object is updated
         # We can also check if a task is deviating significantly from step plan
         if task_id in self.task_step_plans:
             plan = self.task_step_plans[task_id]

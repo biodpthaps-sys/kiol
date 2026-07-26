@@ -120,5 +120,9 @@ class PermissionEngine:
             return agent.authority_level >= 4
         if action_type == "cross_pod_coordinate" or action_type == "request_founder_approval":
             return agent.authority_level >= 5
+        if action_type == "execute_tool":
+            # Already checked earlier, return True if we reached here
+            return True
 
-        return True
+        # Deny-by-Default (Least-Privilege)
+        return False
