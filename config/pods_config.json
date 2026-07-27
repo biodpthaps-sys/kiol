@@ -1,0 +1,202 @@
+{
+  "pods": [
+    {
+      "domain": "Frontend Engineering",
+      "lead_role": "frontend_lead",
+      "builder_roles": ["frontend_builder_1", "frontend_builder_2"],
+      "specialist_roles": ["frontend_perf_specialist"],
+      "auditor_role": "frontend_auditor",
+      "definition_of_done": [
+        "React/HTML components render cleanly without layout shifts",
+        "Performance benchmarks verified",
+        "Accessibility audits pass WCAG 2.1 level AA"
+      ],
+      "verification_method": "playwright tests + accessibility validation",
+      "budget_ceiling": 10.0
+    },
+    {
+      "domain": "Backend Engineering",
+      "lead_role": "backend_lead",
+      "builder_roles": ["backend_builder_1", "backend_builder_2"],
+      "specialist_roles": ["backend_infra_specialist"],
+      "auditor_role": "backend_auditor",
+      "definition_of_done": [
+        "Python/TypeScript code compiles with zero errors",
+        "Unit test coverage matches or exceeds 90%",
+        "No security vulnerabilities or un-sanitized SQL inputs"
+      ],
+      "verification_method": "pytest + bandit security scan",
+      "budget_ceiling": 10.0
+    },
+    {
+      "domain": "Mobile Engineering",
+      "lead_role": "mobile_lead",
+      "builder_roles": ["mobile_builder_1", "mobile_builder_2"],
+      "specialist_roles": ["mobile_platform_specialist"],
+      "auditor_role": "mobile_auditor",
+      "definition_of_done": [
+        "Build compiles on target iOS/Android platforms",
+        "Simulator smoke tests execute successfully"
+      ],
+      "verification_method": "fastlane build + device simulator run",
+      "budget_ceiling": 10.0
+    },
+    {
+      "domain": "Infra/DevOps",
+      "lead_role": "infra_lead",
+      "builder_roles": ["infra_builder_1", "infra_builder_2"],
+      "specialist_roles": ["infra_reliability_specialist"],
+      "auditor_role": "infra_auditor",
+      "definition_of_done": [
+        "Infrastructure code runs without state locking",
+        "Docker containers start cleanly in sandbox",
+        "Terraform linting passes"
+      ],
+      "verification_method": "tflint + local dry-runs",
+      "budget_ceiling": 15.0
+    },
+    {
+      "domain": "Data/Analytics",
+      "lead_role": "data_lead",
+      "builder_roles": ["data_builder_1", "data_builder_2"],
+      "specialist_roles": ["data_modeling_specialist"],
+      "auditor_role": "data_auditor",
+      "definition_of_done": [
+        "DB schemas validated and deployed without data corruption",
+        "Aggregation pipeline output accuracy verified"
+      ],
+      "verification_method": "great_expectations data assertions",
+      "budget_ceiling": 10.0
+    },
+    {
+      "domain": "QA/Test",
+      "lead_role": "qa_lead",
+      "builder_roles": ["qa_test_author_1", "qa_test_author_2"],
+      "specialist_roles": ["qa_exploratory_tester"],
+      "auditor_role": "qa_auditor",
+      "definition_of_done": [
+        "Test suites written and fully integrated",
+        "Verification pipeline runs automatically"
+      ],
+      "verification_method": "CI/CD execution log audit",
+      "budget_ceiling": 8.0
+    },
+    {
+      "domain": "Product Management",
+      "lead_role": "pm_lead",
+      "builder_roles": ["pm_senior_designer_1", "pm_senior_designer_2"],
+      "specialist_roles": ["pm_ux_researcher"],
+      "auditor_role": "pm_auditor",
+      "definition_of_done": [
+        "Product requirements document meets user persona specifications",
+        "Wireframe assets meet style guideline standards"
+      ],
+      "verification_method": "auditor checklist and visual verification",
+      "budget_ceiling": 5.0
+    },
+    {
+      "domain": "Research/R&D",
+      "lead_role": "research_lead",
+      "builder_roles": ["research_builder_1", "research_builder_2"],
+      "specialist_roles": ["research_prototyper"],
+      "auditor_role": "research_auditor",
+      "definition_of_done": [
+        "Prototype functional spec created and validated",
+        "Existing papers and prior art summarized exhaustively"
+      ],
+      "verification_method": "academic source verification",
+      "budget_ceiling": 7.0
+    },
+    {
+      "domain": "Growth/Marketing",
+      "lead_role": "growth_lead",
+      "builder_roles": ["growth_copywriter", "growth_designer"],
+      "specialist_roles": ["growth_analyst"],
+      "auditor_role": "growth_auditor",
+      "definition_of_done": [
+        "Ad copy follows tone and regulatory guidelines",
+        "Landing page assets optimize user funnel flow"
+      ],
+      "verification_method": "brand/compliance audit checks",
+      "budget_ceiling": 6.0
+    },
+    {
+      "domain": "Content",
+      "lead_role": "content_lead",
+      "builder_roles": ["content_writer_1", "content_writer_2"],
+      "specialist_roles": ["content_seo_specialist"],
+      "auditor_role": "content_auditor",
+      "definition_of_done": [
+        "Article meets high readability scores",
+        "Keyword integration maximizes search indexing potential"
+      ],
+      "verification_method": "lighthouse SEO score + readability checks",
+      "budget_ceiling": 5.0
+    },
+    {
+      "domain": "Sales/BD",
+      "lead_role": "sales_lead",
+      "builder_roles": ["sales_builder_1", "sales_builder_2"],
+      "specialist_roles": ["sales_market_specialist"],
+      "auditor_role": "sales_auditor",
+      "definition_of_done": [
+        "Outreach list is sanitized and verified against criteria",
+        "Partnership brief follows company standards"
+      ],
+      "verification_method": "sales manager audit sign-off",
+      "budget_ceiling": 8.0
+    },
+    {
+      "domain": "Customer Support",
+      "lead_role": "support_lead",
+      "builder_roles": ["support_responder_1", "support_responder_2"],
+      "specialist_roles": ["support_knowledge_specialist"],
+      "auditor_role": "support_auditor",
+      "definition_of_done": [
+        "Customer query resolved helpfully and actionably",
+        "SLA timeline goals achieved successfully"
+      ],
+      "verification_method": "auditor response review",
+      "budget_ceiling": 5.0
+    },
+    {
+      "domain": "Finance/Ops",
+      "lead_role": "finance_lead",
+      "builder_roles": ["finance_analyst_1", "finance_analyst_2"],
+      "specialist_roles": ["finance_compliance_specialist"],
+      "auditor_role": "finance_auditor",
+      "definition_of_done": [
+        "Balance sheet and tax reporting calculations match perfectly",
+        "Forecast assumptions clearly documented"
+      ],
+      "verification_method": "double-entry ledger validation",
+      "budget_ceiling": 12.0
+    },
+    {
+      "domain": "Legal/Compliance",
+      "lead_role": "legal_lead",
+      "builder_roles": ["legal_reviewer_1", "legal_reviewer_2"],
+      "specialist_roles": ["legal_research_specialist"],
+      "auditor_role": "legal_auditor",
+      "definition_of_done": [
+        "Contract complies fully with governing state laws",
+        "Privacy policy updates cover required data protection rules"
+      ],
+      "verification_method": "counsel legal compliance check",
+      "budget_ceiling": 15.0
+    },
+    {
+      "domain": "People & Vendor Ops",
+      "lead_role": "people_lead",
+      "builder_roles": ["people_coordinator_1", "people_coordinator_2"],
+      "specialist_roles": ["people_contracts_specialist"],
+      "auditor_role": "people_auditor",
+      "definition_of_done": [
+        "Candidate onboarding sequence finalized cleanly",
+        "Vendor contract terms audited and aligned with corporate guidelines"
+      ],
+      "verification_method": "ops checklists and peer audit review",
+      "budget_ceiling": 7.0
+    }
+  ]
+}
